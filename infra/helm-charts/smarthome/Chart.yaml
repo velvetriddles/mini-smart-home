@@ -1,0 +1,22 @@
+apiVersion: v2
+name: smarthome
+description: Smart Home application Helm umbrella chart
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+dependencies:
+  - name: api-gateway
+    version: 0.1.0
+    repository: file://charts/api-gateway
+  - name: auth
+    version: 0.1.0
+    repository: file://charts/auth
+  - name: device
+    version: 0.1.0
+    repository: file://charts/device
+  - name: voice
+    version: 0.1.0
+    repository: file://charts/voice
+  - name: web
+    version: 0.1.0
+    repository: file://charts/web 

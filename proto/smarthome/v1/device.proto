@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package smarthome.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/username/smarthome/proto/smarthome/v1;smarthomev1";
+
+// Device service handles operations with smart home devices
+service DeviceService {
+  // GetDevice returns device information by ID
+  rpc GetDevice(GetDeviceRequest) returns (GetDeviceResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/devices/{id}"
+    };
+  }
+  
+  // ListDevices returns all available devices
+  rpc ListDevices(ListDevicesRequest) returns (ListDevicesResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/devices"
+    };
+  }
+  
+  // ControlDevice sends a command to control a device
+  rpc ControlDevice(ControlDeviceRequest) returns (ControlDeviceResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/devices/{id}/control"
+      body: "*"
+    };
+  }
+}
+
+// GetDeviceRequest is a request for GetDevice method
+message GetDeviceRequest {
+  string id = 1;
+}
+
+// GetDeviceResponse contains device details
+message GetDeviceResponse {
+  Device device = 1;
+}
+
+// ListDevicesRequest is a request for ListDevices method
+message ListDevicesRequest {}
+
+// ListDevicesResponse contains a list of devices
+message ListDevicesResponse {
+  repeated Device devices = 1;
+}
+
+// ControlDeviceRequest is a request to control a device
+message ControlDeviceRequest {
+  string id = 1;
+  Command command = 2;
+}
+
+// ControlDeviceResponse contains the result of device control
+message ControlDeviceResponse {
+  bool success = 1;
+  string status = 2;
+}
+
+// Device represents a smart home device
+message Device {
+  string id = 1;
+  string name = 2;
+  string type = 3;
+  DeviceStatus status = 4;
+}
+
+// DeviceStatus represents the current status of a device
+message DeviceStatus {
+  bool online = 1;
+  map<string, string> parameters = 2;
+}
+
+// Command represents a command to send to a device
+message Command {
+  string action = 1;
+  map<string, string> parameters = 2;
+} 

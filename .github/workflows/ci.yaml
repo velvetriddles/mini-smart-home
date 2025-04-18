@@ -1,0 +1,60 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  REGISTRY: localhost:5000
+  VERSION: ${{ github.sha }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.22
+
+    - name: Test
+      run: go test -v ./...
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [api-gateway, auth, device, voice, web]
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build and push
+      uses: docker/build-push-action@v5
+      with:
+        context: ./services/${{ matrix.service }}
+        push: true
+        tags: ${{ env.REGISTRY }}/smarthome-${{ matrix.service }}:${{ env.VERSION }}
+    
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Kind
+      uses: helm/kind-action@v1.5.0
+      with:
+        config: ./infra/kind-config.yaml
+    
+    - name: Deploy with Helm
+      run: |
+        helm upgrade --install smarthome ./infra/helm-charts/smarthome \
+          --set global.version=${{ env.VERSION }} 

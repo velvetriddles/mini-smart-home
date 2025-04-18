@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package smarthome.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/username/smarthome/proto/smarthome/v1;smarthomev1";
+
+// Auth service handles user authentication and authorization
+service AuthService {
+  // Login authenticates a user and returns a JWT token
+  rpc Login(LoginRequest) returns (LoginResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/auth/login"
+      body: "*"
+    };
+  }
+  
+  // Logout invalidates the current user session
+  rpc Logout(LogoutRequest) returns (LogoutResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/auth/logout"
+      body: "*"
+    };
+  }
+  
+  // ValidateToken validates a JWT token and returns user info
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+}
+
+// LoginRequest is a request for Login method
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+// LoginResponse contains authentication token
+message LoginResponse {
+  string token = 1;
+  User user = 2;
+}
+
+// LogoutRequest is a request for Logout method
+message LogoutRequest {
+  string token = 1;
+}
+
+// LogoutResponse contains logout operation status
+message LogoutResponse {
+  bool success = 1;
+}
+
+// ValidateTokenRequest is a request for ValidateToken method
+message ValidateTokenRequest {
+  string token = 1;
+}
+
+// ValidateTokenResponse contains token validation result
+message ValidateTokenResponse {
+  bool valid = 1;
+  User user = 2;
+}
+
+// User represents a system user
+message User {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+  repeated string roles = 4;
+} 
