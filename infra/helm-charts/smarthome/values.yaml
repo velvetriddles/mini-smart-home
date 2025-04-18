@@ -6,62 +6,32 @@ services:
   - name: api-gateway
     replicaCount: 1
     port: 8080
+    service:
+      type: NodePort
+      port: 8080
+      nodePort: 30000
   - name: auth
     replicaCount: 1
     port: 9090
+    service:
+      type: ClusterIP
+      port: 9090
   - name: device
     replicaCount: 1
     port: 9200
+    service:
+      type: ClusterIP
+      port: 9200
   - name: voice
     replicaCount: 1
     port: 9100
+    service:
+      type: ClusterIP
+      port: 9100
   - name: web
     replicaCount: 1
     port: 3000
-
-api-gateway:
-  replicaCount: 1
-  image:
-    repository: localhost:5000/smarthome-api-gateway
-    tag: latest
-  service:
-    type: NodePort
-    port: 8080
-    nodePort: 30000
-
-auth:
-  replicaCount: 1
-  image:
-    repository: localhost:5000/smarthome-auth
-    tag: latest
-  service:
-    type: ClusterIP
-    port: 9090
-
-device:
-  replicaCount: 1
-  image:
-    repository: localhost:5000/smarthome-device
-    tag: latest
-  service:
-    type: ClusterIP
-    port: 9200
-
-voice:
-  replicaCount: 1
-  image:
-    repository: localhost:5000/smarthome-voice
-    tag: latest
-  service:
-    type: ClusterIP
-    port: 9100
-
-web:
-  replicaCount: 1
-  image:
-    repository: localhost:5000/smarthome-web
-    tag: latest
-  service:
-    type: NodePort
-    port: 3000
-    nodePort: 30001 
+    service:
+      type: NodePort
+      port: 3000
+      nodePort: 30001 

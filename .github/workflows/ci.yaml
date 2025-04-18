@@ -23,6 +23,17 @@ jobs:
 
     - name: Test
       run: go test -v ./...
+      
+    - name: Go Vet
+      run: go vet ./...
+      
+    - name: Install golangci-lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        version: v1.54
+
+    - name: Run golangci-lint
+      run: golangci-lint run ./...
 
   build:
     needs: test

@@ -12,8 +12,8 @@ COPY . .
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o device .
 
-# Use a minimal alpine image for the final container
-FROM alpine:3.19
+# Use distroless for the final container
+FROM gcr.io/distroless/static-debian12
 
 WORKDIR /app
 

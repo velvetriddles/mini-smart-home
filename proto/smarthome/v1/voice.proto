@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package smarthome.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "smarthome/v1/common/types.proto";
+
+option go_package = "github.com/velvetriddles/mini-smart-home/proto/smarthome/v1;smarthomev1";
+
+// VoiceService обрабатывает голосовые команды и определяет интенты
+service VoiceService {
+  // RecognizeCommand принимает поток голосовых запросов и возвращает поток распознанных команд
+  rpc RecognizeCommand(stream VoiceRequest) returns (stream VoiceResponse);
+
+  // ListIntents возвращает список всех поддерживаемых интентов (отладочный метод)
+  rpc ListIntents(google.protobuf.Empty) returns (IntentList) {
+    option (google.api.http) = {
+      get: "/api/v1/voice/intents"
+    };
+  }
+}
+
+// VoiceRequest представляет запрос на распознавание голосовой команды
+message VoiceRequest {
+  oneof input {
+    bytes audio_data = 1;   // Аудио-данные для распознавания (будет реализовано позже)
+    string text = 2;        // Текстовый ввод (для отладки или текстовых команд)
+  }
+  string session_id = 3;    // Идентификатор сессии
+}
+
+// VoiceResponse содержит распознанную команду и результат ее выполнения
+message VoiceResponse {
+  string session_id = 1;        // Идентификатор сессии
+  Intent recognized_intent = 2; // Распознанный интент
+  string response_text = 3;     // Текстовый ответ для пользователя
+  bool successful = 4;          // Успешность выполнения команды
+  string error = 5;             // Ошибка (если есть)
+}
+
+// Intent представляет распознанное намерение пользователя
+message Intent {
+  string name = 1;                         // Название интента (TurnOn, TurnOff, GetTemperature и т.д.)
+  double confidence = 2;                   // Уровень уверенности в распознавании [0.0-1.0]
+  map<string, Entity> entities = 3;        // Распознанные сущности
+  map<string, string> parameters = 4;      // Дополнительные параметры
+}
+
+// Entity представляет распознанную сущность в интенте
+message Entity {
+  string value = 1;                        // Значение сущности
+  double confidence = 2;                   // Уровень уверенности в распознавании сущности [0.0-1.0]
+  string original_text = 3;                // Исходный текст
+}
+
+// IntentList содержит список поддерживаемых интентов
+message IntentList {
+  repeated IntentDefinition intents = 1;   // Список интентов
+}
+
+// IntentDefinition представляет определение интента
+message IntentDefinition {
+  string name = 1;                         // Название интента
+  string description = 2;                  // Описание
+  repeated string examples = 3;            // Примеры фраз
+  repeated EntityDefinition entities = 4;  // Определения сущностей
+}
+
+// EntityDefinition представляет определение сущности
+message EntityDefinition {
+  string name = 1;                         // Название сущности
+  string description = 2;                  // Описание
+} 

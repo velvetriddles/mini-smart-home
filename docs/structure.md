@@ -1,5 +1,45 @@
 # Структура монорепозитория Smart-Home
 
+## Структура сервисов
+
+### API Gateway (`services/api-gateway`)
+
+```
+services/api-gateway/
+├── cmd/
+│   └── gateway/
+│       └── main.go          # Точка входа API Gateway
+├── internal/
+│   ├── middleware/
+│   │   └── auth.go          # JWT-аутентификация
+│   └── server/
+│       ├── grpc.go          # gRPC-клиент
+│       └── http.go          # HTTP/WS сервер
+├── proto/                   # Сгенерированные proto-файлы
+├── Dockerfile               # Multi-stage Dockerfile
+└── go.mod                   # Go модуль
+```
+
+API Gateway предоставляет REST-API и WebSocket для внешних клиентов, транслируя запросы во внутренние gRPC-сервисы. Реализует JWT-аутентификацию и интеграцию с Kafka для уведомлений в реальном времени.
+
+### Auth Service (`services/auth`)
+
+```
+services/auth/
+├── cmd/
+│   └── auth/
+│       └── main.go          # Точка входа сервиса
+├── internal/
+│   ├── config/              # Конфигурация
+│   ├── model/               # Модели данных
+│   ├── repository/          # Доступ к данным
+│   └── service/             # Бизнес-логика
+├── proto/                   # Сгенерированные proto-файлы
+└── Dockerfile
+```
+
+Auth Service отвечает за аутентификацию и авторизацию пользователей, генерацию и валидацию JWT-токенов.
+
 ```
 SmatHomeVKR/
 ├── .github/

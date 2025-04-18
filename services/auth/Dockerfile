@@ -1,24 +1,44 @@
-FROM golang:1.22-alpine AS builder
+FROM golang:1.20-alpine AS builder
 
 WORKDIR /app
 
-# Copy go.mod and go.sum first to leverage Docker cache
-COPY go.mod ./
+# Копирование и загрузка зависимостей
+COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy the source code
+# Копирование исходного кода
 COPY . .
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o auth .
+# Сборка приложения
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o auth .
 
-# Use a minimal alpine image for the final container
-FROM alpine:3.19
+# Финальный образ
+FROM alpine:3.17
 
 WORKDIR /app
 
-# Copy the binary from the builder stage
-COPY --from=builder /app/auth /app/
+# Установка необходимых пакетов
+RUN apk --no-cache add ca-certificates tzdata
 
-# Set the entrypoint
-ENTRYPOINT ["/app/auth"] 
+# Копирование бинарных файлов и SQL скриптов из предыдущего этапа
+COPY --from=builder /app/auth .
+COPY --from=builder /app/sql ./sql/
+
+# Установка переменных среды по умолчанию
+ENV POSTGRES_DSN="postgres://postgres:postgres@postgres:5432/smarthome?sslmode=disable" \
+    REDIS_DSN="redis://redis:6379/0" \
+    JWT_SECRET="change-this-in-production" \
+    JWT_TTL="24h" \
+    GRPC_PORT="50051" \
+    HTTP_PORT="9090" \
+    LOG_LEVEL="info"
+
+# Проверка жизнеспособности
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+    CMD wget -qO- http://localhost:${HTTP_PORT}/healthz || exit 1
+
+# Открываем порты для gRPC и HTTP серверов
+EXPOSE ${GRPC_PORT} ${HTTP_PORT}
+
+# Запуск приложения
+CMD ["./auth"] 

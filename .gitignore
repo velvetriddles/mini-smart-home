@@ -1,0 +1,46 @@
+# Бинарные файлы и исполняемые файлы
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.o
+*.a
+
+# Сгенерированные файлы
+*.pb.go
+*.pb.gw.go
+*.swagger.json
+third_party/google/
+
+# Локальные файлы конфигурации
+.env
+.env.local
+.DS_Store
+
+# IDE и редакторы
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Директории сборки
+bin/
+obj/
+vendor/
+
+# Kubernetes
+kubeconfig
+
+# Кэши и временные файлы
+.cache/
+tmp/
+temp/
+
+# Директории node_modules для веб-приложения
+web/node_modules/
+web/dist/
+web/build/ 

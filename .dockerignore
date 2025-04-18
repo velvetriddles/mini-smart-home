@@ -1,0 +1,5 @@
+**/.git
+**/docs
+**/infra
+**/node_modules
+**/vendor 

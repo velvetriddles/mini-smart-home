@@ -3,12 +3,13 @@ syntax = "proto3";
 package smarthome.v1;
 
 import "google/api/annotations.proto";
+import "smarthome/v1/common/types.proto";
 
-option go_package = "github.com/username/smarthome/proto/smarthome/v1;smarthomev1";
+option go_package = "github.com/velvetriddles/mini-smart-home/proto/smarthome/v1;smarthomev1";
 
-// Auth service handles user authentication and authorization
+// AuthService обеспечивает аутентификацию и авторизацию пользователей
 service AuthService {
-  // Login authenticates a user and returns a JWT token
+  // Login аутентифицирует пользователя и возвращает JWT токен
   rpc Login(LoginRequest) returns (LoginResponse) {
     option (google.api.http) = {
       post: "/api/v1/auth/login"
@@ -16,7 +17,7 @@ service AuthService {
     };
   }
   
-  // Logout invalidates the current user session
+  // Logout выполняет выход пользователя и отзывает JWT токен
   rpc Logout(LogoutRequest) returns (LogoutResponse) {
     option (google.api.http) = {
       post: "/api/v1/auth/logout"
@@ -24,47 +25,71 @@ service AuthService {
     };
   }
   
-  // ValidateToken validates a JWT token and returns user info
+  // Refresh обновляет истекающий JWT токен и возвращает новый токен
+  rpc Refresh(RefreshRequest) returns (RefreshResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/auth/refresh"
+      body: "*"
+    };
+  }
+  
+  // ValidateToken проверяет JWT токен и возвращает информацию о пользователе
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
 }
 
-// LoginRequest is a request for Login method
+// LoginRequest - запрос на вход в систему
 message LoginRequest {
-  string username = 1;
-  string password = 2;
+  string username = 1; // Имя пользователя или email
+  string password = 2; // Пароль пользователя
 }
 
-// LoginResponse contains authentication token
+// LoginResponse содержит токены аутентификации и информацию о пользователе
 message LoginResponse {
-  string token = 1;
-  User user = 2;
+  string access_token = 1;      // JWT-токен доступа
+  string refresh_token = 2;     // Токен обновления
+  int64 expires_at = 3;         // Unix-время истечения access_token
+  User user = 4;                // Информация о пользователе
 }
 
-// LogoutRequest is a request for Logout method
+// LogoutRequest - запрос на выход из системы
 message LogoutRequest {
-  string token = 1;
+  string access_token = 1;  // JWT-токен для отзыва
 }
 
-// LogoutResponse contains logout operation status
+// LogoutResponse содержит статус операции выхода
 message LogoutResponse {
-  bool success = 1;
+  bool success = 1;         // Успешность операции
+  string message = 2;       // Сообщение о результате операции
 }
 
-// ValidateTokenRequest is a request for ValidateToken method
+// RefreshRequest - запрос на обновление токена
+message RefreshRequest {
+  string refresh_token = 1; // Токен обновления
+}
+
+// RefreshResponse содержит новый набор токенов
+message RefreshResponse {
+  string access_token = 1;  // Новый JWT-токен доступа
+  string refresh_token = 2; // Новый токен обновления
+  int64 expires_at = 3;     // Unix-время истечения access_token
+}
+
+// ValidateTokenRequest - запрос на валидацию токена
 message ValidateTokenRequest {
-  string token = 1;
+  string access_token = 1;  // JWT-токен для проверки
 }
 
-// ValidateTokenResponse contains token validation result
+// ValidateTokenResponse содержит результат валидации токена
 message ValidateTokenResponse {
-  bool valid = 1;
-  User user = 2;
+  bool valid = 1;           // Валидность токена
+  User user = 2;            // Информация о пользователе
+  string error = 3;         // Ошибка (если есть)
 }
 
-// User represents a system user
+// User представляет пользователя системы
 message User {
-  string id = 1;
-  string username = 2;
-  string email = 3;
-  repeated string roles = 4;
+  string id = 1;            // Уникальный идентификатор
+  string username = 2;      // Имя пользователя
+  string email = 3;         // Email пользователя
+  repeated string roles = 4; // Роли пользователя
 } 

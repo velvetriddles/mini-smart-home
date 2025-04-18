@@ -1,0 +1,21 @@
+{{- range .Values.services }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}
+  labels:
+    app: {{ .name }}
+spec:
+  type: {{ .service.type | default "ClusterIP" }}
+  ports:
+    - port: {{ .port }}
+      targetPort: {{ .port }}
+      protocol: TCP
+      name: http
+      {{- if eq (.service.type | default "ClusterIP") "NodePort" }}
+      nodePort: {{ .service.nodePort }}
+      {{- end }}
+  selector:
+    app: {{ .name }}
+{{- end }} 

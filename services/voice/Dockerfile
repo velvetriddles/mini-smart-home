@@ -1,24 +1,27 @@
-FROM golang:1.22-alpine AS builder
+FROM golang:1.22-bookworm AS builder
 
 WORKDIR /app
 
-# Copy go.mod and go.sum first to leverage Docker cache
-COPY go.mod ./
+# Копируем только модули для кэширования зависимостей
+COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy the source code
+# Копируем исходный код
 COPY . .
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o voice .
+# Собираем приложение
+RUN CGO_ENABLED=0 GOOS=linux go build -o /voice-service ./cmd/voice/main.go
 
-# Use a minimal alpine image for the final container
-FROM alpine:3.19
+# Конечный образ
+FROM gcr.io/distroless/static-debian12
 
 WORKDIR /app
 
-# Copy the binary from the builder stage
-COPY --from=builder /app/voice /app/
+# Копируем бинарный файл из предыдущего этапа
+COPY --from=builder /voice-service /app/voice-service
 
-# Set the entrypoint
-ENTRYPOINT ["/app/voice"]
+EXPOSE 9300
+EXPOSE 9201
+
+# Запускаем приложение
+ENTRYPOINT ["/app/voice-service"]

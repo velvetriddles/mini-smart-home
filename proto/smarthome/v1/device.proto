@@ -3,80 +3,122 @@ syntax = "proto3";
 package smarthome.v1;
 
 import "google/api/annotations.proto";
+import "smarthome/v1/common/types.proto";
 
-option go_package = "github.com/username/smarthome/proto/smarthome/v1;smarthomev1";
+option go_package = "github.com/velvetriddles/mini-smart-home/proto/smarthome/v1;smarthomev1";
 
-// Device service handles operations with smart home devices
+// DeviceService управляет умными устройствами
 service DeviceService {
-  // GetDevice returns device information by ID
+  // GetDevice возвращает информацию об устройстве по ID
   rpc GetDevice(GetDeviceRequest) returns (GetDeviceResponse) {
     option (google.api.http) = {
       get: "/api/v1/devices/{id}"
     };
   }
   
-  // ListDevices returns all available devices
+  // ListDevices возвращает все доступные устройства
   rpc ListDevices(ListDevicesRequest) returns (ListDevicesResponse) {
     option (google.api.http) = {
       get: "/api/v1/devices"
     };
   }
   
-  // ControlDevice sends a command to control a device
+  // ControlDevice отправляет команду для управления устройством
   rpc ControlDevice(ControlDeviceRequest) returns (ControlDeviceResponse) {
     option (google.api.http) = {
       post: "/api/v1/devices/{id}/control"
       body: "*"
     };
   }
+  
+  // SendCommand отправляет команду на устройство и возвращает результат
+  rpc SendCommand(Command) returns (CommandResult);
+  
+  // StreamStatuses создает двунаправленный поток для отслеживания статусов устройств
+  rpc StreamStatuses(stream StatusRequest) returns (stream StatusResponse);
 }
 
-// GetDeviceRequest is a request for GetDevice method
+// GetDeviceRequest - запрос для получения устройства
 message GetDeviceRequest {
-  string id = 1;
+  string id = 1;  // Идентификатор устройства
 }
 
-// GetDeviceResponse contains device details
+// GetDeviceResponse содержит детали устройства
 message GetDeviceResponse {
-  Device device = 1;
+  Device device = 1;  // Информация об устройстве
 }
 
-// ListDevicesRequest is a request for ListDevices method
-message ListDevicesRequest {}
+// ListDevicesRequest - запрос на получение списка устройств
+message ListDevicesRequest {
+  // Добавлена возможность фильтрации
+  string type = 1;      // Фильтр по типу устройства (опционально)
+  bool online_only = 2; // Фильтр только онлайн устройств (опционально)
+}
 
-// ListDevicesResponse contains a list of devices
+// ListDevicesResponse содержит список устройств
 message ListDevicesResponse {
-  repeated Device devices = 1;
+  repeated Device devices = 1;  // Список устройств
+  int32 total_count = 2;        // Общее количество устройств
 }
 
-// ControlDeviceRequest is a request to control a device
+// ControlDeviceRequest - запрос на управление устройством
 message ControlDeviceRequest {
-  string id = 1;
-  Command command = 2;
+  string id = 1;       // Идентификатор устройства
+  Command command = 2; // Команда для выполнения
 }
 
-// ControlDeviceResponse contains the result of device control
+// ControlDeviceResponse содержит результат выполнения команды
 message ControlDeviceResponse {
-  bool success = 1;
-  string status = 2;
+  bool success = 1;    // Успешность выполнения
+  string status = 2;   // Статус или сообщение
+  string error = 3;    // Ошибка (если есть)
 }
 
-// Device represents a smart home device
-message Device {
-  string id = 1;
-  string name = 2;
-  string type = 3;
-  DeviceStatus status = 4;
-}
-
-// DeviceStatus represents the current status of a device
-message DeviceStatus {
-  bool online = 1;
-  map<string, string> parameters = 2;
-}
-
-// Command represents a command to send to a device
+// Command представляет команду для отправки на устройство
 message Command {
-  string action = 1;
-  map<string, string> parameters = 2;
+  string device_id = 1;                 // Идентификатор устройства
+  string action = 2;                    // Действие (включить, выключить и т.д.)
+  map<string, string> parameters = 3;   // Параметры команды
+  smarthome.v1.common.Timestamp time = 4; // Метка времени команды
+}
+
+// CommandResult содержит результат выполнения команды
+message CommandResult {
+  string device_id = 1;                 // Идентификатор устройства
+  bool success = 2;                     // Успешность выполнения
+  string status = 3;                    // Текстовый статус
+  map<string, string> response_data = 4; // Данные ответа
+  smarthome.v1.common.Timestamp time = 5; // Метка времени ответа
+}
+
+// StatusRequest запрос на получение статуса устройств
+message StatusRequest {
+  string device_id = 1;              // ID устройства (для подписки на конкретное устройство)
+  bool subscribe_all = 2;            // Подписка на все устройства
+}
+
+// StatusResponse содержит обновленный статус устройства
+message StatusResponse {
+  string device_id = 1;                 // Идентификатор устройства
+  DeviceStatus status = 2;              // Обновленный статус
+  smarthome.v1.common.Timestamp time = 3; // Метка времени статуса
+}
+
+// Device представляет устройство умного дома
+message Device {
+  string id = 1;              // Уникальный идентификатор
+  string name = 2;            // Имя устройства 
+  string type = 3;            // Тип устройства
+  string model = 4;           // Модель устройства
+  string room = 5;            // Комната/расположение
+  DeviceStatus status = 6;    // Текущий статус
+  repeated string tags = 7;   // Теги
+}
+
+// DeviceStatus представляет статус устройства
+message DeviceStatus {
+  bool online = 1;                     // Онлайн статус
+  map<string, string> parameters = 2;  // Динамические параметры
+  int32 battery_level = 3;             // Уровень батареи (если применимо)
+  float signal_strength = 4;           // Сила сигнала (если применимо)
 } 
