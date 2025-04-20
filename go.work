@@ -3,7 +3,8 @@ go 1.23.0
 toolchain go1.23.2
 
 use (
-	./libs
+	./libs/kafka
+	./proto
 	./services/api-gateway
 	./services/auth
 	./services/device

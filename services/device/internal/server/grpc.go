@@ -6,11 +6,12 @@ import (
 	"log"
 	"time"
 
-	pb "github.com/velvetriddles/mini-smart-home/proto/smarthome/v1"
 	"github.com/velvetriddles/mini-smart-home/services/device/internal/datastore"
 	"github.com/velvetriddles/mini-smart-home/services/device/internal/model"
+	pb "github.com/velvetriddles/mini-smart-home/services/device/proto/smarthome/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // GRPCServer реализует интерфейс gRPC сервера для Device Service
@@ -174,10 +175,7 @@ func (s *GRPCServer) SendCommand(ctx context.Context, cmd *pb.Command) (*pb.Comm
 	// Обновляем время команды, если не задано
 	timeNow := time.Now()
 	if cmd.Time == nil {
-		cmd.Time = &pb.Timestamp{
-			Seconds: timeNow.Unix(),
-			Nanos:   int32(timeNow.Nanosecond()),
-		}
+		cmd.Time = timestamppb.New(timeNow)
 	}
 
 	// Создаем объект результата
@@ -186,10 +184,7 @@ func (s *GRPCServer) SendCommand(ctx context.Context, cmd *pb.Command) (*pb.Comm
 		Success:      true,
 		Status:       "Command sent successfully",
 		ResponseData: make(map[string]string),
-		Time: &pb.Timestamp{
-			Seconds: timeNow.Unix(),
-			Nanos:   int32(timeNow.Nanosecond()),
-		},
+		Time:         timestamppb.New(timeNow),
 	}
 
 	// Для демонстрации возвращаем текущие параметры устройства в ответе
@@ -277,10 +272,7 @@ func (s *GRPCServer) StreamStatuses(stream pb.DeviceService_StreamStatusesServer
 				resp := &pb.StatusResponse{
 					DeviceId: device.ID,
 					Status:   device.Status.ToProto(),
-					Time: &pb.Timestamp{
-						Seconds: now.Unix(),
-						Nanos:   int32(now.Nanosecond()),
-					},
+					Time:     timestamppb.New(now),
 				}
 
 				if err := stream.Send(resp); err != nil {

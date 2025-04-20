@@ -14,6 +14,9 @@
   - `kafka/` - обертка над Sarama для работы с Kafka
 - `proto/` - контракты gRPC собственной разработки
   - `smarthome/` - API системы "Умный дом"
+    - `v1/` - версия API
+      - `common/` - общие типы данных, используемые несколькими сервисами
+- `proto_generated/` - сгенерированные Go-файлы для общих типов
 - `third_party/` - сторонние proto-файлы и зависимости
   - `google/` - локальные копии Google API proto-файлов
 - `web/` - фронтенд-приложение (React+Vite)
@@ -38,30 +41,40 @@
 
 ## Генерация кода из proto-файлов
 
-Генерация кода осуществляется с помощью protoc и скрипта generate_proto.sh:
+Генерация кода осуществляется с помощью protoc и скрипта generate_proto.sh через цели в Makefile:
 
 ```bash
-# Установка protoc и необходимых плагинов
-sudo apt-get update
-sudo apt-get install -y protobuf-compiler
-go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
-go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest
-
-# Добавление плагинов в PATH
-export PATH="$PATH:$(go env GOPATH)/bin"
+# Установка необходимых инструментов protobuf
+make install-tools
 
 # Генерация кода из proto-файлов
-chmod +x ./generate_proto.sh
-./generate_proto.sh
+make proto
 ```
 
-Скрипт `generate_proto.sh` автоматически:
+На Windows используйте:
+
+```bash
+make install-tools
+make proto-win
+```
+
+Цель `install-tools` автоматически устанавливает:
+- protoc-gen-go - для генерации Go кода
+- protoc-gen-go-grpc - для gRPC серверов и клиентов
+- protoc-gen-grpc-gateway - для REST API из gRPC
+- protoc-gen-openapiv2 - для OpenAPI спецификации
+
+Скрипт `generate_proto.sh` (или `generate_proto.ps1` для Windows) автоматически:
 1. Проверяет наличие необходимых файлов Google API (`annotations.proto` и `http.proto`) и скачивает их, если они отсутствуют
 2. Сохраняет эти файлы локально в директории `third_party/google/api/` для дальнейшего использования
 3. Генерирует код для всех сервисов с правильными импортами
 4. Создает необходимые выходные директории
+5. Генерирует общие типы в директории `proto_generated/`
+
+Такой подход позволяет:
+- Разместить общие типы данных в одном месте для всех сервисов
+- Избежать дублирования кода
+- Генерировать OpenAPI с корректными перекрестными ссылками
 
 ## Локальный запуск
 

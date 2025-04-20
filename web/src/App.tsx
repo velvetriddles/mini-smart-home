@@ -1,26 +1,22 @@
-import { useState } from 'react'
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import { DevicesProvider } from './contexts/DevicesContext';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
 
 function App() {
-  const [devices, setDevices] = useState([])
-
   return (
-    <div className="app">
-      <header>
-        <h1>Smart Home</h1>
-      </header>
-      <main>
-        <div className="dashboard">
-          {devices.length === 0 ? (
-            <p>Нет подключенных устройств</p>
-          ) : (
-            <div className="devices-grid">
-              {/* Устройства будут отображаться здесь */}
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
-  )
+    <AuthProvider>
+      <DevicesProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<Dashboard />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </DevicesProvider>
+    </AuthProvider>
+  );
 }
 
-export default App 
+export default App; 

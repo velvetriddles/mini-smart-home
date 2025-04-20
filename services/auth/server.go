@@ -19,6 +19,7 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	smarthomev1 "github.com/velvetriddles/mini-smart-home/services/auth/proto/smarthome/v1"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc"
@@ -28,82 +29,12 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// Временная заглушка для proto-интерфейсов без реальной имплементации
-// Это позволит нам выполнить задачу по обновлению Auth Service, не вдаваясь в детали proto
-// В реальном проекте эти интерфейсы будут генерироваться из .proto файлов
-type User struct {
-	Id       string
-	Username string
-	Email    string
-	Roles    []string
-}
-
-type LoginRequest struct {
-	Username string
-	Password string
-}
-
-type LoginResponse struct {
-	AccessToken  string
-	RefreshToken string
-	ExpiresAt    int64
-	User         *User
-}
-
-type LogoutRequest struct {
-	AccessToken string
-}
-
-type LogoutResponse struct {
-	Success bool
-	Message string
-}
-
-type RefreshRequest struct {
-	RefreshToken string
-}
-
-type RefreshResponse struct {
-	AccessToken  string
-	RefreshToken string
-	ExpiresAt    int64
-}
-
-type ValidateTokenRequest struct {
-	AccessToken string
-}
-
-type ValidateTokenResponse struct {
-	Valid bool
-	User  *User
-	Error string
-}
-
-// Интерфейс AuthServiceServer определяет методы, которые должен имплементировать наш сервер
-type AuthServiceServer interface {
-	Login(ctx context.Context, req *LoginRequest) (*LoginResponse, error)
-	Logout(ctx context.Context, req *LogoutRequest) (*LogoutResponse, error)
-	Refresh(ctx context.Context, req *RefreshRequest) (*RefreshResponse, error)
-	ValidateToken(ctx context.Context, req *ValidateTokenRequest) (*ValidateTokenResponse, error)
-}
-
-// Заглушка для пустой имплементации AuthServiceServer
-type UnimplementedAuthServiceServer struct{}
-
-func (*UnimplementedAuthServiceServer) Login(ctx context.Context, req *LoginRequest) (*LoginResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
-}
-
-func (*UnimplementedAuthServiceServer) Logout(ctx context.Context, req *LogoutRequest) (*LogoutResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Logout not implemented")
-}
-
-func (*UnimplementedAuthServiceServer) Refresh(ctx context.Context, req *RefreshRequest) (*RefreshResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Refresh not implemented")
-}
-
-func (*UnimplementedAuthServiceServer) ValidateToken(ctx context.Context, req *ValidateTokenRequest) (*ValidateTokenResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ValidateToken not implemented")
+// RedisClientInterface определяет интерфейс для работы с Redis
+type RedisClientInterface interface {
+	Ping(ctx context.Context) *redis.StatusCmd
+	Exists(ctx context.Context, keys ...string) *redis.IntCmd
+	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd
+	Close() error
 }
 
 // Config содержит настройки сервера
@@ -120,11 +51,11 @@ type Config struct {
 type Server struct {
 	config      *Config
 	db          *sql.DB
-	redisClient *redis.Client
+	redisClient RedisClientInterface
 	grpcServer  *grpc.Server
 	httpServer  *http.Server
 	logger      *zap.Logger
-	UnimplementedAuthServiceServer
+	smarthomev1.UnimplementedAuthServiceServer
 	healthpb.UnimplementedHealthServer
 }
 
@@ -523,7 +454,7 @@ func (s *Server) RevokeToken(ctx context.Context, tokenString string) error {
 }
 
 // Login реализует метод Login из AuthService
-func (s *Server) Login(ctx context.Context, req *LoginRequest) (*LoginResponse, error) {
+func (s *Server) Login(ctx context.Context, req *smarthomev1.LoginRequest) (*smarthomev1.LoginResponse, error) {
 	// Проверка входных данных
 	if req.Username == "" || req.Password == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "username and password are required")
@@ -567,11 +498,11 @@ func (s *Server) Login(ctx context.Context, req *LoginRequest) (*LoginResponse, 
 	}
 
 	// Возврат ответа
-	return &LoginResponse{
+	return &smarthomev1.LoginResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresAt:    expiresAt.Unix(),
-		User: &User{
+		User: &smarthomev1.User{
 			Id:       user.ID,
 			Username: user.Username,
 			Email:    user.Email,
@@ -581,7 +512,7 @@ func (s *Server) Login(ctx context.Context, req *LoginRequest) (*LoginResponse, 
 }
 
 // Logout реализует метод Logout из AuthService
-func (s *Server) Logout(ctx context.Context, req *LogoutRequest) (*LogoutResponse, error) {
+func (s *Server) Logout(ctx context.Context, req *smarthomev1.LogoutRequest) (*smarthomev1.LogoutResponse, error) {
 	// Проверка входных данных
 	if req.AccessToken == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "access_token is required")
@@ -591,20 +522,20 @@ func (s *Server) Logout(ctx context.Context, req *LogoutRequest) (*LogoutRespons
 	err := s.RevokeToken(ctx, req.AccessToken)
 	if err != nil {
 		s.logger.Error("Error revoking token", zap.Error(err))
-		return &LogoutResponse{
+		return &smarthomev1.LogoutResponse{
 			Success: false,
 			Message: "Failed to revoke token",
 		}, nil
 	}
 
-	return &LogoutResponse{
+	return &smarthomev1.LogoutResponse{
 		Success: true,
 		Message: "Token revoked successfully",
 	}, nil
 }
 
 // Refresh реализует метод Refresh из AuthService
-func (s *Server) Refresh(ctx context.Context, req *RefreshRequest) (*RefreshResponse, error) {
+func (s *Server) Refresh(ctx context.Context, req *smarthomev1.RefreshRequest) (*smarthomev1.RefreshResponse, error) {
 	// Проверка входных данных
 	if req.RefreshToken == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "refresh_token is required")
@@ -657,7 +588,7 @@ func (s *Server) Refresh(ctx context.Context, req *RefreshRequest) (*RefreshResp
 		return nil, status.Errorf(codes.Internal, "failed to generate token")
 	}
 
-	return &RefreshResponse{
+	return &smarthomev1.RefreshResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresAt:    expiresAt.Unix(),
@@ -665,7 +596,7 @@ func (s *Server) Refresh(ctx context.Context, req *RefreshRequest) (*RefreshResp
 }
 
 // ValidateToken реализует метод ValidateToken из AuthService
-func (s *Server) ValidateToken(ctx context.Context, req *ValidateTokenRequest) (*ValidateTokenResponse, error) {
+func (s *Server) ValidateToken(ctx context.Context, req *smarthomev1.ValidateTokenRequest) (*smarthomev1.ValidateTokenResponse, error) {
 	// Проверка входных данных
 	if req.AccessToken == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "access_token is required")
@@ -674,7 +605,7 @@ func (s *Server) ValidateToken(ctx context.Context, req *ValidateTokenRequest) (
 	// Валидация токена
 	_, claims, err := s.ValidateJWT(req.AccessToken)
 	if err != nil {
-		return &ValidateTokenResponse{
+		return &smarthomev1.ValidateTokenResponse{
 			Valid: false,
 			Error: err.Error(),
 		}, nil
@@ -683,7 +614,7 @@ func (s *Server) ValidateToken(ctx context.Context, req *ValidateTokenRequest) (
 	// Извлечение данных пользователя
 	userID, ok := claims["sub"].(string)
 	if !ok {
-		return &ValidateTokenResponse{
+		return &smarthomev1.ValidateTokenResponse{
 			Valid: false,
 			Error: "invalid token payload",
 		}, nil
@@ -691,7 +622,7 @@ func (s *Server) ValidateToken(ctx context.Context, req *ValidateTokenRequest) (
 
 	username, ok := claims["name"].(string)
 	if !ok {
-		return &ValidateTokenResponse{
+		return &smarthomev1.ValidateTokenResponse{
 			Valid: false,
 			Error: "invalid token payload",
 		}, nil
@@ -700,7 +631,7 @@ func (s *Server) ValidateToken(ctx context.Context, req *ValidateTokenRequest) (
 	// Извлечение ролей пользователя
 	rolesClaim, ok := claims["roles"]
 	if !ok {
-		return &ValidateTokenResponse{
+		return &smarthomev1.ValidateTokenResponse{
 			Valid: false,
 			Error: "invalid token payload",
 		}, nil
@@ -727,7 +658,7 @@ func (s *Server) ValidateToken(ctx context.Context, req *ValidateTokenRequest) (
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return &ValidateTokenResponse{
+			return &smarthomev1.ValidateTokenResponse{
 				Valid: false,
 				Error: "user not found",
 			}, nil
@@ -737,9 +668,9 @@ func (s *Server) ValidateToken(ctx context.Context, req *ValidateTokenRequest) (
 
 		// В случае ошибки базы данных, но валидного токена,
 		// все равно возвращаем информацию из токена
-		return &ValidateTokenResponse{
+		return &smarthomev1.ValidateTokenResponse{
 			Valid: true,
-			User: &User{
+			User: &smarthomev1.User{
 				Id:       userID,
 				Username: username,
 				Roles:    roles,
@@ -748,9 +679,9 @@ func (s *Server) ValidateToken(ctx context.Context, req *ValidateTokenRequest) (
 	}
 
 	// Возврат успешного ответа
-	return &ValidateTokenResponse{
+	return &smarthomev1.ValidateTokenResponse{
 		Valid: true,
-		User: &User{
+		User: &smarthomev1.User{
 			Id:       userID,
 			Username: username,
 			Email:    email,

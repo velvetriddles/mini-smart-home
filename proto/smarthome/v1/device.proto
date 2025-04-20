@@ -3,6 +3,7 @@ syntax = "proto3";
 package smarthome.v1;
 
 import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
 import "smarthome/v1/common/types.proto";
 
 option go_package = "github.com/velvetriddles/mini-smart-home/proto/smarthome/v1;smarthomev1";
@@ -79,7 +80,7 @@ message Command {
   string device_id = 1;                 // Идентификатор устройства
   string action = 2;                    // Действие (включить, выключить и т.д.)
   map<string, string> parameters = 3;   // Параметры команды
-  smarthome.v1.common.Timestamp time = 4; // Метка времени команды
+  google.protobuf.Timestamp time = 4;   // Метка времени команды
 }
 
 // CommandResult содержит результат выполнения команды
@@ -88,7 +89,7 @@ message CommandResult {
   bool success = 2;                     // Успешность выполнения
   string status = 3;                    // Текстовый статус
   map<string, string> response_data = 4; // Данные ответа
-  smarthome.v1.common.Timestamp time = 5; // Метка времени ответа
+  google.protobuf.Timestamp time = 5;   // Метка времени ответа
 }
 
 // StatusRequest запрос на получение статуса устройств
@@ -101,7 +102,7 @@ message StatusRequest {
 message StatusResponse {
   string device_id = 1;                 // Идентификатор устройства
   DeviceStatus status = 2;              // Обновленный статус
-  smarthome.v1.common.Timestamp time = 3; // Метка времени статуса
+  google.protobuf.Timestamp time = 3;   // Метка времени статуса
 }
 
 // Device представляет устройство умного дома

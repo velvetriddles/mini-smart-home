@@ -46,25 +46,29 @@ kubectl cluster-info
 1. Сгенерируйте код из proto-файлов:
 
 ```bash
-# Установка protoc плагинов
-go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
-go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest
-
-# Добавление плагинов в PATH
-export PATH="$PATH:$(go env GOPATH)/bin"
-
-# Генерация кода
-chmod +x ./generate_proto.sh
-./generate_proto.sh
+# Установка protoc плагинов и генерация кода
+make install-tools
+make proto
 ```
 
-Скрипт `generate_proto.sh` автоматически:
+Или на Windows:
+```bash
+make install-tools
+make proto-win
+```
+
+Цель `install-tools` автоматически установит все необходимые инструменты для protobuf:
+- protoc-gen-go - для генерации Go кода из proto-файлов
+- protoc-gen-go-grpc - для генерации gRPC кода для Go
+- protoc-gen-grpc-gateway - для генерации gRPC-Gateway кода
+- protoc-gen-openapiv2 - для генерации OpenAPI спецификации
+
+Скрипт `generate_proto.sh` (или `generate_proto.ps1` на Windows) автоматически:
 - Проверяет наличие и при необходимости скачивает необходимые Google API proto-файлы
 - Сохраняет их локально в `third_party/google/api/` для повторного использования
-- Генерирует код для всех сервисов (api-gateway, auth, device)
+- Генерирует код для всех сервисов (api-gateway, auth, device, voice)
 - Создает необходимые выходные директории
+- Размещает общие типы в директории `proto_generated/`
 
 Все необходимые файлы сохраняются локально, что убирает зависимость от внешних ресурсов при последующих запусках.
 

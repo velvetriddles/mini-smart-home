@@ -4,7 +4,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 )
 
 // Config содержит конфигурацию для клиента Kafka

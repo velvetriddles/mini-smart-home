@@ -47,6 +47,7 @@ SmatHomeVKR/
 │       └── ci.yaml           # CI/CD конфигурация GitHub Actions
 ├── docs/
 │   ├── context.md            # Описание проекта
+│   ├── api-gateway.md        # Документация по API Gateway
 │   └── structure.md          # Этот файл с описанием структуры
 ├── infra/
 │   ├── helm-charts/
@@ -61,10 +62,15 @@ SmatHomeVKR/
 ├── proto/
 │   ├── smarthome/
 │   │   └── v1/
+│   │       ├── common/       # Общие определения типов
+│   │       │   └── types.proto  
 │   │       ├── auth.proto    # Описание сервиса аутентификации
 │   │       └── device.proto  # Описание сервиса устройств
 │   ├── buf.gen.yaml          # Конфигурация для генерации кода
 │   └── buf.yaml              # Buf-линтер и настройки
+├── proto_generated/          # Общие сгенерированные protobuf файлы
+│   └── smarthome/
+│       └── v1/               # Сгенерированные файлы общих типов
 ├── services/
 │   ├── api-gateway/
 │   │   ├── Dockerfile        # Multi-stage сборка
@@ -93,6 +99,7 @@ SmatHomeVKR/
 │   └── package.json          # Зависимости и скрипты
 ├── go.work                   # Go Workspaces конфигурация
 ├── Makefile                  # Цели для сборки, генерации и деплоя
+├── generate_proto.sh         # Скрипт для генерации protobuf файлов
 └── README.md                 # Общее описание проекта
 ```
 
@@ -100,7 +107,8 @@ SmatHomeVKR/
 
 ### Корневая директория
 - `go.work` - описывает все Go модули в монорепозитории
-- `Makefile` - содержит цели: proto, build, kind, deploy
+- `Makefile` - содержит цели: install-tools, proto, build, kind, deploy
+- `generate_proto.sh` - скрипт для генерации protobuf кода
 - `README.md` - общее описание проекта и его структуры
 
 ### Сервисы (services/)
@@ -108,10 +116,16 @@ SmatHomeVKR/
 - `go.mod` - модуль Go с зависимостями сервиса
 - `main.go` - точка входа с минимальной инициализацией
 - `Dockerfile` - multi-stage сборка (Go → Alpine)
+- `proto/` - сгенерированные protobuf файлы специфичные для сервиса
 
 ### Прото-файлы (proto/)
 - Контракты gRPC в формате protobuf
 - Настройки для генерации Go кода, REST, OpenAPI
+- Директория `common/` содержит общие типы, используемые несколькими сервисами
+
+### Общие сгенерированные protobuf файлы (proto_generated/)
+- Содержит сгенерированные файлы для общих типов из `proto/smarthome/v1/common/`
+- Используется всеми сервисами для доступа к общим типам
 
 ### Инфраструктура (infra/)
 - Kind кластер для локальной разработки

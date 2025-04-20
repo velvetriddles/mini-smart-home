@@ -1,0 +1,78 @@
+version: '3'
+
+services:
+  # API Gateway
+  api-gateway:
+    build: ./services/api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - AUTH_SERVICE=auth:50051
+      - DEVICE_SERVICE=device:50052
+      - VOICE_SERVICE=voice:50053
+    command: [
+      "/gateway",
+      "--auth-service=auth:50051",
+      "--device-service=device:50052",
+      "--voice-service=voice:50053"
+    ]
+    depends_on:
+      - auth
+      - device
+      - voice
+    networks:
+      - backend
+
+  # Auth Service
+  auth:
+    build: ./services/auth
+    environment:
+      - DB_HOST=mongo
+      - DB_PORT=27017
+    depends_on:
+      - mongo
+    networks:
+      - backend
+
+  # Device Service
+  device:
+    build: ./services/device
+    environment:
+      - DB_HOST=mongo
+      - DB_PORT=27017
+    depends_on:
+      - mongo
+    networks:
+      - backend
+
+  # Voice Service
+  voice:
+    build: ./services/voice
+    networks:
+      - backend
+
+  # Frontend
+  web:
+    build: ./web
+    ports:
+      - "80:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - frontend
+      - backend
+
+  # MongoDB для хранения данных
+  mongo:
+    image: mongo:latest
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - backend
+
+networks:
+  frontend:
+  backend:
+
+volumes:
+  mongo-data: 

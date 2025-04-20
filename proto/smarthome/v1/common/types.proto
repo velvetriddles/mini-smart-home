@@ -10,13 +10,4 @@ message Empty {}
 // DeviceId представляет идентификатор устройства
 message DeviceId {
   string id = 1;
-}
-
-// Timestamp представляет метку времени
-message Timestamp {
-  // Количество секунд с эпохи Unix
-  int64 seconds = 1;
-  
-  // Наносекунды [0, 999999999]
-  int32 nanos = 2;
 } 

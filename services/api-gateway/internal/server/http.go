@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/jwtauth/v5"
 	"github.com/gorilla/websocket"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/velvetriddles/mini-smart-home/services/api-gateway/internal"
 	authMiddleware "github.com/velvetriddles/mini-smart-home/services/api-gateway/internal/middleware"
 	smarthomev1 "github.com/velvetriddles/mini-smart-home/services/api-gateway/proto/smarthome/v1"
 	"google.golang.org/grpc"
@@ -29,10 +30,12 @@ type HTTPConfig struct {
 
 // Server представляет собой HTTP-сервер
 type HTTPServer struct {
-	router   *chi.Mux
-	config   HTTPConfig
-	grpcConn *grpc.ClientConn
-	upgrader websocket.Upgrader
+	router     *chi.Mux
+	config     HTTPConfig
+	authConn   *grpc.ClientConn
+	deviceConn *grpc.ClientConn
+	voiceConn  *grpc.ClientConn
+	upgrader   websocket.Upgrader
 }
 
 // Создает новый HTTP-сервер
@@ -61,9 +64,11 @@ func NewHTTPServer(config HTTPConfig) *HTTPServer {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
-	// Добавляем JWT middleware
-	r.Use(jwtauth.Verifier(authMiddleware.TokenAuth))
-	r.Use(jwtauth.Authenticator)
+	// Добавляем JWT middleware, но не для всех маршрутов
+	// Переместили в setupRoutes
+
+	// Соединение с gRPC-сервисами
+	server.setupGRPCConnections()
 
 	// Настройка маршрутов
 	server.setupRoutes()
@@ -71,18 +76,99 @@ func NewHTTPServer(config HTTPConfig) *HTTPServer {
 	return server
 }
 
+// Устанавливает соединения с gRPC-сервисами
+func (s *HTTPServer) setupGRPCConnections() {
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+
+	var err error
+
+	// Соединение с Auth Service
+	s.authConn, err = grpc.Dial(s.config.AuthServiceAddr, opts...)
+	if err != nil {
+		log.Fatalf("Failed to connect to Auth Service: %v", err)
+	}
+
+	// Соединение с Device Service
+	s.deviceConn, err = grpc.Dial(s.config.DeviceServiceAddr, opts...)
+	if err != nil {
+		log.Fatalf("Failed to connect to Device Service: %v", err)
+	}
+
+	// Соединение с Voice Service
+	s.voiceConn, err = grpc.Dial(s.config.VoiceServiceAddr, opts...)
+	if err != nil {
+		log.Fatalf("Failed to connect to Voice Service: %v", err)
+	}
+}
+
 // Настраивает маршруты HTTP
 func (s *HTTPServer) setupRoutes() {
-	// Подключаем gRPC-gateway
-	s.setupGRPCGateway()
+	// Публичные маршруты, не требующие авторизации
+	s.router.Group(func(r chi.Router) {
+		// Обработчик проверки здоровья
+		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/plain")
+			w.Write([]byte("OK"))
+		})
 
-	// Обработчик WebSocket
-	s.router.Get("/ws", s.handleWebSocket)
+		// WebSocket для получения статусов устройств
+		deviceClient := smarthomev1.NewDeviceServiceClient(s.deviceConn)
+		r.Get("/ws/status", internal.NewWebSocketProxy(internal.WebSocketConfig{
+			DeviceClient: deviceClient,
+		}))
 
-	// Обработчик проверки здоровья
-	s.router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+		// Публичные API, требующие авторизации
+		r.Group(func(r chi.Router) {
+			// Подключаем gRPC-gateway для публичных эндпоинтов
+			// Например, авторизация
+			ctx := context.Background()
+			mux := runtime.NewServeMux(
+				runtime.WithIncomingHeaderMatcher(func(k string) (string, bool) {
+					if strings.ToLower(k) == "authorization" {
+						return k, true
+					}
+					return runtime.DefaultHeaderMatcher(k)
+				}),
+			)
+
+			opts := []grpc.DialOption{
+				grpc.WithTransportCredentials(insecure.NewCredentials()),
+			}
+
+			// Регистрируем только AuthService для публичных маршрутов
+			if err := smarthomev1.RegisterAuthServiceHandlerFromEndpoint(ctx, mux, s.config.AuthServiceAddr, opts); err != nil {
+				log.Fatalf("Failed to register public AuthService handler: %v", err)
+			}
+
+			r.Mount("/api/v1/auth", http.StripPrefix("/api/v1/auth", mux))
+		})
+	})
+
+	// Защищенные маршруты, требующие авторизации
+	s.router.Group(func(r chi.Router) {
+		// Добавляем JWT middleware для защищенных маршрутов
+		r.Use(authMiddleware.JWT)
+
+		// Настраиваем защищенные gRPC-gateway эндпоинты
+		ctx := context.Background()
+		mux := runtime.NewServeMux()
+
+		opts := []grpc.DialOption{
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		}
+
+		// Регистрируем Device и Voice сервисы для защищенных маршрутов
+		if err := smarthomev1.RegisterDeviceServiceHandlerFromEndpoint(ctx, mux, s.config.DeviceServiceAddr, opts); err != nil {
+			log.Fatalf("Failed to register DeviceService handler: %v", err)
+		}
+
+		if err := smarthomev1.RegisterVoiceServiceHandlerFromEndpoint(ctx, mux, s.config.VoiceServiceAddr, opts); err != nil {
+			log.Fatalf("Failed to register VoiceService handler: %v", err)
+		}
+
+		r.Mount("/api/v1", http.StripPrefix("/api/v1", mux))
 	})
 
 	// Тестовый обработчик для генерации токена (для отладки)
@@ -98,59 +184,22 @@ func (s *HTTPServer) setupRoutes() {
 	})
 }
 
-// Настраивает gRPC-gateway для проксирования REST запросов в gRPC
-func (s *HTTPServer) setupGRPCGateway() {
-	ctx := context.Background()
-	mux := runtime.NewServeMux()
-
-	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	}
-
-	if err := smarthomev1.RegisterAuthServiceHandlerFromEndpoint(ctx, mux, s.config.AuthServiceAddr, opts); err != nil {
-		log.Fatalf("Failed to register AuthService handler: %v", err)
-	}
-
-	if err := smarthomev1.RegisterDeviceServiceHandlerFromEndpoint(ctx, mux, s.config.DeviceServiceAddr, opts); err != nil {
-		log.Fatalf("Failed to register DeviceService handler: %v", err)
-	}
-
-	if err := smarthomev1.RegisterVoiceServiceHandlerFromEndpoint(ctx, mux, s.config.VoiceServiceAddr, opts); err != nil {
-		log.Fatalf("Failed to register VoiceService handler: %v", err)
-	}
-
-	s.router.Mount("/api/v1", http.StripPrefix("/api/v1", mux))
-}
-
-// Обработчик WebSocket соединений
-func (s *HTTPServer) handleWebSocket(w http.ResponseWriter, r *http.Request) {
-	// Улучшаем соединение до WebSocket
-	conn, err := s.upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Printf("Error upgrading connection to WebSocket: %v", err)
-		return
-	}
-	defer conn.Close()
-
-	// Простой эхо-сервер для WebSocket
-	for {
-		messageType, message, err := conn.ReadMessage()
-		if err != nil {
-			log.Printf("Error reading WebSocket message: %v", err)
-			break
-		}
-
-		// Эхо-ответ
-		if err := conn.WriteMessage(messageType, message); err != nil {
-			log.Printf("Error writing WebSocket message: %v", err)
-			break
-		}
-	}
-}
-
 // Start запускает HTTP-сервер
 func (s *HTTPServer) Start() error {
 	addr := fmt.Sprintf(":%d", s.config.Port)
 	log.Printf("Starting HTTP server on %s", addr)
 	return http.ListenAndServe(addr, s.router)
+}
+
+// Close закрывает все соединения
+func (s *HTTPServer) Close() {
+	if s.authConn != nil {
+		s.authConn.Close()
+	}
+	if s.deviceConn != nil {
+		s.deviceConn.Close()
+	}
+	if s.voiceConn != nil {
+		s.voiceConn.Close()
+	}
 }

@@ -18,11 +18,101 @@ Web -> Gateway: POST /api/v1/auth/login
 Gateway -> Auth: gRPC Login()
 Auth -> DB: Проверка учётных данных
 DB --> Auth: Данные пользователя
-Auth -> Auth: Генерация JWT
-Auth --> Gateway: LoginResponse{token, user}
-Gateway --> Web: {token, user}
-Web -> Web: Сохранение токена\nв localStorage
+Auth -> Auth: Генерация JWT\n(access_token и refresh_token)
+Auth --> Gateway: LoginResponse{accessToken, refreshToken, user}
+Gateway --> Web: {accessToken, refreshToken, user}
+Web -> Web: Сохранение токенов\nв localStorage
 Web --> Пользователь: Успешная аутентификация
+
+@enduml
+```
+
+## Обновление токена доступа
+
+```plantuml
+@startuml
+title Обновление токена доступа
+
+actor Пользователь
+participant "Web\n(React SPA)" as Web
+participant "API Gateway" as Gateway
+participant "Auth Service" as Auth
+database "PostgreSQL\n(users)" as DB
+database "Redis\n(revoked-jwt)" as Redis
+
+Пользователь -> Web: Запрос данных
+Web -> Web: Проверка наличия\nи срока действия токена
+
+alt Токен истек или близок к истечению
+    Web -> Gateway: POST /api/v1/auth/refresh\n{refreshToken}
+    Gateway -> Auth: gRPC Refresh()
+    Auth -> Auth: Проверка refresh_token
+    
+    alt refresh_token валиден
+        Auth -> DB: Получение данных пользователя
+        DB --> Auth: Данные пользователя
+        Auth -> Redis: Отзыв старого refresh_token
+        Auth -> Auth: Генерация новых токенов
+        Auth --> Gateway: RefreshResponse{accessToken, refreshToken, expiresAt}
+        Gateway --> Web: {accessToken, refreshToken, expiresAt}
+        Web -> Web: Обновление токенов в localStorage
+        Web -> Gateway: Повтор исходного запроса с новым токеном
+        Gateway --> Web: Данные
+        Web --> Пользователь: Отображение данных
+    else refresh_token невалиден
+        Auth --> Gateway: 401 Unauthorized
+        Gateway --> Web: 401 Unauthorized
+        Web -> Web: Перенаправление на страницу входа
+        Web --> Пользователь: Требуется повторная аутентификация
+    end
+else Токен действителен
+    Web -> Gateway: Запрос с токеном
+    Gateway -> Auth: gRPC ValidateToken()
+    Auth --> Gateway: ValidateTokenResponse{valid, user}
+    Gateway --> Web: Данные
+    Web --> Пользователь: Отображение данных
+end
+
+@enduml
+```
+
+## Автоматическое обновление токена при получении 401
+
+```plantuml
+@startuml
+title Автоматическое обновление токена при получении 401
+
+actor Пользователь
+participant "Web\n(React SPA)" as Web
+participant "Fetch\nInterceptor" as Interceptor
+participant "API Gateway" as Gateway
+participant "Auth Service" as Auth
+database "Redis\n(revoked-jwt)" as Redis
+
+Пользователь -> Web: Действие, требующее запрос к API
+Web -> Interceptor: fetch('/api/ресурс')
+Interceptor -> Gateway: Запрос с access_token
+Gateway -> Auth: gRPC ValidateToken()
+Auth -> Auth: Проверка токена\n(истек срок действия)
+Auth --> Gateway: 401 Unauthorized
+
+Gateway --> Interceptor: 401 Unauthorized
+Interceptor -> Interceptor: Проверка наличия refresh_token
+Interceptor -> Gateway: POST /api/v1/auth/refresh\n{refreshToken}
+Gateway -> Auth: gRPC Refresh()
+Auth -> Auth: Проверка refresh_token
+Auth -> Redis: Отзыв старого refresh_token
+Auth -> Auth: Генерация новых токенов
+Auth --> Gateway: RefreshResponse{accessToken, refreshToken, expiresAt}
+Gateway --> Interceptor: {accessToken, refreshToken, expiresAt}
+
+Interceptor -> Interceptor: Обновление токенов в localStorage
+Interceptor -> Gateway: Повтор исходного запроса с новым токеном
+Gateway -> Auth: gRPC ValidateToken()
+Auth --> Gateway: ValidateTokenResponse{valid, user}
+Gateway --> Interceptor: Данные
+Interceptor --> Web: Данные
+Web --> Пользователь: Отображение результата
 
 @enduml
 ```

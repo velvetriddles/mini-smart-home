@@ -1,17 +1,25 @@
-.PHONY: proto build kind deploy clean run-gateway clean-proto proto-win
+.PHONY: proto build kind deploy clean run-gateway clean-proto proto-win install-tools
 
 # Глобальные переменные
 REGISTRY ?= localhost:5000
 VERSION ?= latest
 SERVICES := api-gateway auth device voice
 
+# Установка инструментов для protobuf
+install-tools:
+	@echo "Installing protobuf toolchain..."
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+	go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
+	go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest
+
 # Proto-генерация (Linux/Mac)
-proto: clean-proto
+proto: install-tools clean-proto
 	@echo "Generating protobuf code..."
 	./generate_proto.sh
 
 # Proto-генерация (Windows)
-proto-win: clean-proto-win
+proto-win: install-tools clean-proto-win
 	@echo "Generating protobuf code on Windows..."
 	powershell -ExecutionPolicy Bypass -File ./generate_proto.ps1
 
@@ -22,10 +30,12 @@ clean-proto:
 	rm -rf services/auth/proto/* || true
 	rm -rf services/device/proto/* || true
 	rm -rf services/voice/proto/* || true
+	rm -rf proto_generated || true
 	mkdir -p services/api-gateway/proto/openapiv2
 	mkdir -p services/auth/proto
 	mkdir -p services/device/proto
 	mkdir -p services/voice/proto
+	mkdir -p proto_generated
 
 # Очистка сгенерированных proto файлов (Windows)
 clean-proto-win:
@@ -34,10 +44,12 @@ clean-proto-win:
 	powershell -ExecutionPolicy Bypass -Command "Remove-Item -Recurse -Force -ErrorAction SilentlyContinue services/auth/proto/*"
 	powershell -ExecutionPolicy Bypass -Command "Remove-Item -Recurse -Force -ErrorAction SilentlyContinue services/device/proto/*"
 	powershell -ExecutionPolicy Bypass -Command "Remove-Item -Recurse -Force -ErrorAction SilentlyContinue services/voice/proto/*"
+	powershell -ExecutionPolicy Bypass -Command "Remove-Item -Recurse -Force -ErrorAction SilentlyContinue proto_generated"
 	powershell -ExecutionPolicy Bypass -Command "New-Item -Path services/api-gateway/proto/openapiv2 -ItemType Directory -Force"
 	powershell -ExecutionPolicy Bypass -Command "New-Item -Path services/auth/proto -ItemType Directory -Force"
 	powershell -ExecutionPolicy Bypass -Command "New-Item -Path services/device/proto -ItemType Directory -Force"
 	powershell -ExecutionPolicy Bypass -Command "New-Item -Path services/voice/proto -ItemType Directory -Force"
+	powershell -ExecutionPolicy Bypass -Command "New-Item -Path proto_generated -ItemType Directory -Force"
 
 # Сборка всех сервисов
 build:

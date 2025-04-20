@@ -4,7 +4,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	pb "github.com/velvetriddles/mini-smart-home/proto/smarthome/v1"
+	pb "github.com/velvetriddles/mini-smart-home/services/device/proto/smarthome/v1"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Константы для типов устройств
@@ -124,14 +125,11 @@ func (d *Device) UpdateParameterValue(key, value string) {
 }
 
 // CreateTimestamp создает объект Timestamp из времени
-func CreateTimestamp(t time.Time) *pb.Timestamp {
-	return &pb.Timestamp{
-		Seconds: t.Unix(),
-		Nanos:   int32(t.Nanosecond()),
-	}
+func CreateTimestamp(t time.Time) *timestamppb.Timestamp {
+	return timestamppb.New(t)
 }
 
 // TimestampToTime конвертирует Timestamp в time.Time
-func TimestampToTime(ts *pb.Timestamp) time.Time {
-	return time.Unix(ts.Seconds, int64(ts.Nanos))
+func TimestampToTime(ts *timestamppb.Timestamp) time.Time {
+	return ts.AsTime()
 }
