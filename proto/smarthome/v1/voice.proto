@@ -3,10 +3,9 @@ syntax = "proto3";
 package smarthome.v1;
 
 import "google/api/annotations.proto";
-import "google/protobuf/empty.proto";
-import "smarthome/v1/common/types.proto";
+import "smarthome/v1/common.proto";
 
-option go_package = "github.com/velvetriddles/mini-smart-home/proto/smarthome/v1;smarthomev1";
+option go_package = "github.com/velvetriddles/mini-smart-home/proto_generated/smarthome/v1;smarthomev1";
 
 // VoiceService обрабатывает голосовые команды и определяет интенты
 service VoiceService {
@@ -14,7 +13,7 @@ service VoiceService {
   rpc RecognizeCommand(stream VoiceRequest) returns (stream VoiceResponse);
 
   // ListIntents возвращает список всех поддерживаемых интентов (отладочный метод)
-  rpc ListIntents(google.protobuf.Empty) returns (IntentList) {
+  rpc ListIntents(Empty) returns (IntentList) {
     option (google.api.http) = {
       get: "/api/v1/voice/intents"
     };

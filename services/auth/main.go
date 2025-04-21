@@ -10,6 +10,16 @@ import (
 	"go.uber.org/zap"
 )
 
+// AuthConfig содержит конфигурацию сервиса аутентификации
+type AuthConfig struct {
+	GrpcPort    string
+	HttpPort    string
+	PostgresDSN string
+	RedisDSN    string
+	JwtSecret   string
+	JwtTTL      time.Duration
+}
+
 func main() {
 	// Инициализация логгера
 	logger, err := zap.NewProduction()
@@ -21,7 +31,7 @@ func main() {
 	logger.Info("Auth service starting...")
 
 	// Получение конфигурации из переменных окружения
-	config := &Config{
+	authConfig := &AuthConfig{
 		GrpcPort:    getEnv("GRPC_PORT", "50051"),
 		HttpPort:    getEnv("HTTP_PORT", "9090"),
 		PostgresDSN: getEnv("POSTGRES_DSN", "postgres://postgres:postgres@localhost:5432/smarthome?sslmode=disable"),
@@ -30,7 +40,16 @@ func main() {
 		JwtTTL:      getEnvDuration("JWT_TTL", 24*time.Hour),
 	}
 
-	// Создание и запуск сервера
+	// Создание и запуск сервера (преобразуем в формат, ожидаемый NewServer)
+	config := &Config{
+		GrpcPort:    authConfig.GrpcPort,
+		HttpPort:    authConfig.HttpPort,
+		PostgresDSN: authConfig.PostgresDSN,
+		RedisDSN:    authConfig.RedisDSN,
+		JwtSecret:   authConfig.JwtSecret,
+		JwtTTL:      authConfig.JwtTTL,
+	}
+
 	server, err := NewServer(config)
 	if err != nil {
 		logger.Fatal("Failed to create server", zap.Error(err))
@@ -44,8 +63,8 @@ func main() {
 	}()
 
 	logger.Info("Auth service started",
-		zap.String("grpc_port", config.GrpcPort),
-		zap.String("http_port", config.HttpPort))
+		zap.String("grpc_port", authConfig.GrpcPort),
+		zap.String("http_port", authConfig.HttpPort))
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)

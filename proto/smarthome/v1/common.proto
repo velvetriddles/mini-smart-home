@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package smarthome.v1;
+
+option go_package = "github.com/velvetriddles/mini-smart-home/proto_generated/smarthome/v1;smarthomev1";
+
+// Empty используется для методов без содержательного запроса или ответа
+message Empty {}
+
+// DeviceId представляет идентификатор устройства
+message DeviceId {
+  string id = 1;
+}
+
+// Общие типы данных для всех сервисов могут быть добавлены здесь 

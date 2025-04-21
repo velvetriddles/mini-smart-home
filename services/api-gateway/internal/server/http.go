@@ -13,9 +13,9 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gorilla/websocket"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	smarthomev1 "github.com/velvetriddles/mini-smart-home/proto_generated/smarthome/v1"
 	"github.com/velvetriddles/mini-smart-home/services/api-gateway/internal"
 	authMiddleware "github.com/velvetriddles/mini-smart-home/services/api-gateway/internal/middleware"
-	smarthomev1 "github.com/velvetriddles/mini-smart-home/services/api-gateway/proto/smarthome/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

@@ -2,17 +2,11 @@
 
 PROTO_DIR=./proto
 THIRD_PARTY_DIR=./third_party
-OUT_GATEWAY=./services/api-gateway/proto
-OUT_AUTH=./services/auth/proto
-OUT_DEVICE=./services/device/proto
-OUT_VOICE=./services/voice/proto
-OUT_COMMON=./proto_generated
+OUT_DIR=./proto_generated
+OPENAPI_DIR=./api-docs
 
 # Определяем пути для Google API
 GOOGLE_API_DIR="$THIRD_PARTY_DIR/google/api"
-
-# Определение пути к Google protobuf
-PROTOC_INC="$(go env GOPATH)/pkg/mod/github.com/golang/protobuf@*/src"
 
 # Явно указываем пути к инструментам протобаф
 PROTOC_GEN_GO="$(go env GOPATH)/bin/protoc-gen-go"
@@ -36,50 +30,39 @@ if [ ! -f "$GOOGLE_API_DIR/annotations.proto" ] || [ ! -f "$GOOGLE_API_DIR/http.
 fi
 
 # Создание директорий для выходных файлов
-mkdir -p $OUT_GATEWAY/openapiv2
-mkdir -p $OUT_AUTH
-mkdir -p $OUT_DEVICE
-mkdir -p $OUT_VOICE
-mkdir -p $OUT_COMMON
+mkdir -p $OPENAPI_DIR
+mkdir -p $OUT_DIR/smarthome/v1
 
 # Общий набор опций
-BASE="--proto_path=$PROTO_DIR --proto_path=$THIRD_PARTY_DIR --proto_path=$PROTOC_INC --plugin=protoc-gen-go=$PROTOC_GEN_GO --plugin=protoc-gen-go-grpc=$PROTOC_GEN_GO_GRPC --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_opt=require_unimplemented_servers=false"
+BASE="--proto_path=$PROTO_DIR --proto_path=$THIRD_PARTY_DIR --plugin=protoc-gen-go=$PROTOC_GEN_GO --plugin=protoc-gen-go-grpc=$PROTOC_GEN_GO_GRPC --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_opt=require_unimplemented_servers=false"
+
+# Очистка старых сгенерированных файлов из папки proto
+echo "Удаление старых сгенерированных файлов из папки proto..."
+find $PROTO_DIR -name "*.pb.go" -type f -delete
+find $PROTO_DIR -name "*_grpc.pb.go" -type f -delete
+
+# Очистка старых сгенерированных файлов в proto_generated
+echo "Удаление старых сгенерированных файлов из папки proto_generated..."
+rm -rf $OUT_DIR/smarthome
 
 # Общие типы данных
 echo "Генерация кода для общих типов данных..."
 protoc $BASE \
-  --go_out=$OUT_COMMON --go-grpc_out=$OUT_COMMON \
-  $PROTO_DIR/smarthome/v1/common/*.proto
+  --go_out=$OUT_DIR --go-grpc_out=$OUT_DIR \
+  $PROTO_DIR/smarthome/v1/common.proto
 
 # Gateway: gRPC‑Gateway + OpenAPI + stubs
-echo "Генерация кода для API Gateway..."
+echo "Генерация кода для всех сервисов..."
 protoc $BASE \
-  --go_out=$OUT_GATEWAY --go-grpc_out=$OUT_GATEWAY \
-  --plugin=protoc-gen-grpc-gateway=$PROTOC_GEN_GRPC_GATEWAY --grpc-gateway_out=$OUT_GATEWAY --grpc-gateway_opt=paths=source_relative \
+  --go_out=$OUT_DIR --go-grpc_out=$OUT_DIR \
+  --plugin=protoc-gen-grpc-gateway=$PROTOC_GEN_GRPC_GATEWAY --grpc-gateway_out=$OUT_DIR --grpc-gateway_opt=paths=source_relative \
   $PROTO_DIR/smarthome/v1/*.proto
 
 # OpenAPI документация для всех сервисов
 echo "Генерация OpenAPI документации..."
 protoc $BASE \
-  --plugin=protoc-gen-openapiv2=$PROTOC_GEN_OPENAPIV2 --openapiv2_out=$OUT_GATEWAY/openapiv2 \
+  --plugin=protoc-gen-openapiv2=$PROTOC_GEN_OPENAPIV2 --openapiv2_out=$OPENAPI_DIR \
   $PROTO_DIR/smarthome/v1/*.proto
 
-# Auth‑service
-echo "Генерация кода для Auth Service..."
-protoc $BASE \
-  --go_out=$OUT_AUTH --go-grpc_out=$OUT_AUTH \
-  $PROTO_DIR/smarthome/v1/auth.proto
-
-# Device‑service
-echo "Генерация кода для Device Service..."
-protoc $BASE \
-  --go_out=$OUT_DEVICE --go-grpc_out=$OUT_DEVICE \
-  $PROTO_DIR/smarthome/v1/device.proto
-
-# Voice‑service
-echo "Генерация кода для Voice Service..."
-protoc $BASE \
-  --go_out=$OUT_VOICE --go-grpc_out=$OUT_VOICE \
-  $PROTO_DIR/smarthome/v1/voice.proto
-
 echo "Генерация завершена успешно!"
+echo "Все сервисы теперь должны импортировать proto из пакета github.com/velvetriddles/mini-smart-home/proto_generated/smarthome/v1"

@@ -7,14 +7,13 @@ import (
 	"log"
 	"strings"
 
-	pb "github.com/velvetriddles/mini-smart-home/proto/smarthome/v1"
+	pb "github.com/velvetriddles/mini-smart-home/proto_generated/smarthome/v1"
 	"github.com/velvetriddles/mini-smart-home/services/voice/internal/model"
 	"github.com/velvetriddles/mini-smart-home/services/voice/internal/nlu"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // GRPCServer представляет реализацию сервера VoiceService
@@ -118,7 +117,7 @@ func (s *GRPCServer) RecognizeCommand(stream pb.VoiceService_RecognizeCommandSer
 }
 
 // ListIntents возвращает список поддерживаемых интентов
-func (s *GRPCServer) ListIntents(ctx context.Context, _ *emptypb.Empty) (*pb.IntentList, error) {
+func (s *GRPCServer) ListIntents(ctx context.Context, _ *pb.Empty) (*pb.IntentList, error) {
 	supportedIntents := s.nluEngine.GetSupportedIntents()
 	result := &pb.IntentList{
 		Intents: make([]*pb.IntentDefinition, 0, len(supportedIntents)),

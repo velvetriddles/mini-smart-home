@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	pb "github.com/velvetriddles/mini-smart-home/services/device/proto/smarthome/v1"
+	pb "github.com/velvetriddles/mini-smart-home/proto_generated/smarthome/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

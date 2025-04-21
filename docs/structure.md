@@ -46,8 +46,12 @@ SmatHomeVKR/
 │   └── workflows/
 │       └── ci.yaml           # CI/CD конфигурация GitHub Actions
 ├── docs/
-│   ├── context.md            # Описание проекта
 │   ├── api-gateway.md        # Документация по API Gateway
+│   ├── architecture-c4.md    # Схемы архитектуры в формате C4
+│   ├── context.md            # Описание проекта
+│   ├── flow-sequence.md      # Диаграммы последовательности процессов
+│   ├── glossary.md           # Глоссарий проекта
+│   ├── setup-local.md        # Руководство по локальной настройке
 │   └── structure.md          # Этот файл с описанием структуры
 ├── infra/
 │   ├── helm-charts/
@@ -71,34 +75,45 @@ SmatHomeVKR/
 ├── proto_generated/          # Общие сгенерированные protobuf файлы
 │   └── smarthome/
 │       └── v1/               # Сгенерированные файлы общих типов
+├── scripts/
+│   └── bootstrap.sh          # Скрипт инициализации окружения
 ├── services/
-│   ├── api-gateway/
+│   ├── api-gateway/          # Сервис API Gateway
 │   │   ├── Dockerfile        # Multi-stage сборка
 │   │   ├── go.mod            # Модуль Go
 │   │   └── main.go           # Точка входа
-│   ├── auth/
+│   ├── auth/                 # Сервис аутентификации
 │   │   ├── Dockerfile
 │   │   ├── go.mod
 │   │   └── main.go
-│   ├── device/
+│   ├── device/               # Сервис управления устройствами
 │   │   ├── Dockerfile
 │   │   ├── go.mod
 │   │   └── main.go
-│   ├── voice/
-│   │   ├── Dockerfile
-│   │   ├── go.mod
-│   │   └── main.go
-│   └── web/
+│   └── voice/                # Сервис голосового управления
 │       ├── Dockerfile
 │       ├── go.mod
 │       └── main.go
-├── web/
+├── third_party/              # Сторонние зависимости
+│   └── google/               # Google API и прото-файлы
+├── web/                      # Веб-интерфейс
 │   ├── src/
 │   │   └── App.tsx           # React компонент
+│   ├── public/               # Статические файлы
+│   ├── node_modules/         # Зависимости NPM
 │   ├── Dockerfile            # Multi-stage сборка для фронтенда
-│   └── package.json          # Зависимости и скрипты
+│   ├── INSTALL.md            # Инструкция по установке
+│   ├── README.md             # Описание фронтенда
+│   ├── index.html            # Входная точка HTML
+│   ├── package.json          # Зависимости и скрипты
+│   ├── tailwind.config.js    # Конфигурация Tailwind CSS
+│   ├── tsconfig.json         # Настройки TypeScript
+│   └── vite.config.ts        # Конфигурация Vite
+├── docker-compose.yml        # Конфигурация Docker Compose
 ├── go.work                   # Go Workspaces конфигурация
+├── go.work.sum               # Контрольные суммы зависимостей
 ├── Makefile                  # Цели для сборки, генерации и деплоя
+├── TODO.md                   # Список задач
 ├── generate_proto.sh         # Скрипт для генерации protobuf файлов
 └── README.md                 # Общее описание проекта
 ```
@@ -106,14 +121,15 @@ SmatHomeVKR/
 ## Описание файлов в каждой директории
 
 ### Корневая директория
-- `go.work` - описывает все Go модули в монорепозитории
+- `go.mod` - единый модуль Go для всего проекта (github.com/velvetriddles/mini-smart-home)
 - `Makefile` - содержит цели: install-tools, proto, build, kind, deploy
+- `docker-compose.yml` - конфигурация для запуска сервисов через Docker Compose
 - `generate_proto.sh` - скрипт для генерации protobuf кода
 - `README.md` - общее описание проекта и его структуры
+- `TODO.md` - список запланированных задач и улучшений
 
 ### Сервисы (services/)
 Каждый сервис содержит:
-- `go.mod` - модуль Go с зависимостями сервиса
 - `main.go` - точка входа с минимальной инициализацией
 - `Dockerfile` - multi-stage сборка (Go → Alpine)
 - `proto/` - сгенерированные protobuf файлы специфичные для сервиса
@@ -133,11 +149,25 @@ SmatHomeVKR/
 - Подчарты для каждого микросервиса
 
 ### Web-интерфейс (web/)
-- React приложение (TypeScript)
+- React приложение на TypeScript
+- Vite для сборки и разработки
+- Tailwind CSS для стилизации
 - Dockerfile для сборки и деплоя фронтенда
 
 ### Библиотеки (libs/)
 - Общий код, используемый несколькими сервисами
+
+### Скрипты (scripts/)
+- `bootstrap.sh` - скрипт для быстрой инициализации окружения разработки
+
+### Сторонние зависимости (third_party/)
+- Внешние зависимости, необходимые для сборки проекта
+- Google API и protobuf определения
+
+### Документация (docs/)
+- Полная документация по архитектуре, API и настройке
+- Диаграммы и схемы архитектуры в формате C4
+- Руководство по локальной разработке
 
 ### CI/CD (.github/)
 - Пайплайн: тесты → сборка → деплой в Kind 

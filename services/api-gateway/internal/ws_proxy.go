@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/websocket"
-	smarthomev1 "github.com/velvetriddles/mini-smart-home/services/api-gateway/proto/smarthome/v1"
+	smarthomev1 "github.com/velvetriddles/mini-smart-home/proto_generated/smarthome/v1"
 )
 
 // WebSocketConfig содержит настройки для WebSocket-прокси

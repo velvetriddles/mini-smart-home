@@ -4,14 +4,14 @@ package smarthome.v1;
 
 import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
-import "smarthome/v1/common/types.proto";
+import "smarthome/v1/common.proto";
 
-option go_package = "github.com/velvetriddles/mini-smart-home/proto/smarthome/v1;smarthomev1";
+option go_package = "github.com/velvetriddles/mini-smart-home/proto_generated/smarthome/v1;smarthomev1";
 
 // DeviceService управляет умными устройствами
 service DeviceService {
   // GetDevice возвращает информацию об устройстве по ID
-  rpc GetDevice(GetDeviceRequest) returns (GetDeviceResponse) {
+  rpc GetDevice(DeviceId) returns (GetDeviceResponse) {
     option (google.api.http) = {
       get: "/api/v1/devices/{id}"
     };
@@ -37,11 +37,6 @@ service DeviceService {
   
   // StreamStatuses создает двунаправленный поток для отслеживания статусов устройств
   rpc StreamStatuses(stream StatusRequest) returns (stream StatusResponse);
-}
-
-// GetDeviceRequest - запрос для получения устройства
-message GetDeviceRequest {
-  string id = 1;  // Идентификатор устройства
 }
 
 // GetDeviceResponse содержит детали устройства

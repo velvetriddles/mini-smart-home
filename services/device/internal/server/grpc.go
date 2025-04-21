@@ -6,9 +6,9 @@ import (
 	"log"
 	"time"
 
+	pb "github.com/velvetriddles/mini-smart-home/proto_generated/smarthome/v1"
 	"github.com/velvetriddles/mini-smart-home/services/device/internal/datastore"
 	"github.com/velvetriddles/mini-smart-home/services/device/internal/model"
-	pb "github.com/velvetriddles/mini-smart-home/services/device/proto/smarthome/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -28,7 +28,7 @@ func NewGRPCServer(store datastore.DeviceStore) *GRPCServer {
 }
 
 // GetDevice реализует gRPC метод для получения устройства по ID
-func (s *GRPCServer) GetDevice(ctx context.Context, req *pb.GetDeviceRequest) (*pb.GetDeviceResponse, error) {
+func (s *GRPCServer) GetDevice(ctx context.Context, req *pb.DeviceId) (*pb.GetDeviceResponse, error) {
 	log.Printf("GetDevice request for ID: %s", req.Id)
 
 	device, err := s.store.GetDevice(req.Id)

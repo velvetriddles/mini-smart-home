@@ -19,7 +19,7 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	smarthomev1 "github.com/velvetriddles/mini-smart-home/services/auth/proto/smarthome/v1"
+	smarthomev1 "github.com/velvetriddles/mini-smart-home/proto_generated/smarthome/v1"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc"

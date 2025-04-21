@@ -13,12 +13,12 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	pb "github.com/velvetriddles/mini-smart-home/proto_generated/smarthome/v1"
 	"github.com/velvetriddles/mini-smart-home/services/device/internal/datastore"
 	"github.com/velvetriddles/mini-smart-home/services/device/internal/server"
-	pb "github.com/velvetriddles/mini-smart-home/services/device/proto/smarthome/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
-	"google.golang.org/grpc/health/grpc_health_v1"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -51,8 +51,8 @@ func main() {
 
 	// Регистрируем Health Service
 	healthServer := health.NewServer()
-	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
-	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
+	healthServer.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
+	healthpb.RegisterHealthServer(grpcServer, healthServer)
 
 	// Включаем reflection для отладки с помощью grpcurl
 	reflection.Register(grpcServer)
@@ -92,7 +92,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
+	healthServer.SetServingStatus("", healthpb.HealthCheckResponse_NOT_SERVING)
 	grpcServer.GracefulStop()
 
 	<-ctx.Done()

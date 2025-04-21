@@ -3,9 +3,9 @@ syntax = "proto3";
 package smarthome.v1;
 
 import "google/api/annotations.proto";
-import "smarthome/v1/common/types.proto";
+import "smarthome/v1/common.proto";
 
-option go_package = "github.com/velvetriddles/mini-smart-home/proto/smarthome/v1;smarthomev1";
+option go_package = "github.com/velvetriddles/mini-smart-home/proto_generated/smarthome/v1;smarthomev1";
 
 // AuthService обеспечивает аутентификацию и авторизацию пользователей
 service AuthService {
@@ -35,6 +35,9 @@ service AuthService {
   
   // ValidateToken проверяет JWT токен и возвращает информацию о пользователе
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+  
+  // CheckHealth проверяет состояние службы
+  rpc CheckHealth(Empty) returns (HealthResponse);
 }
 
 // LoginRequest - запрос на вход в систему
@@ -92,4 +95,10 @@ message User {
   string username = 2;      // Имя пользователя
   string email = 3;         // Email пользователя
   repeated string roles = 4; // Роли пользователя
+}
+
+// HealthResponse содержит информацию о состоянии сервиса
+message HealthResponse {
+  bool ready = 1;      // Готовность сервиса
+  string version = 2;  // Версия сервиса
 } 
